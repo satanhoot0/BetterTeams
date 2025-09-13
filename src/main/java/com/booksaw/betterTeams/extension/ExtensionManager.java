@@ -7,6 +7,7 @@ import lombok.Getter;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
@@ -61,9 +62,41 @@ public class ExtensionManager {
 		// TODO
 	}
 
-	void loadSingleExtension(RegisteredExtension reg) {
-		// TODO
-	}
+	 void loadSingleExtension(RegisteredExtension reg) throws Exception {
+
+		File jarFile = reg.getJar();
+		ExtensionInfo info = reg.getInfo();
+	 	URLClassLoader loader = null;
+
+
+		 loader = new URLClassLoader(
+				 new URL[]{jarFile.toURI().toURL()},
+				 getClass().getClassLoader());
+
+		 Class<?> clazz = Class.forName(info.getMainClass(), true, loader);
+
+		 if (!BetterTeamsExtension.class.isAssignableFrom(clazz)) {
+			 throw new ClassCastException(info.getMainClass() + " does not extend BetterTeamsExtension");
+		 }
+
+		 BetterTeamsExtension instance = (BetterTeamsExtension) clazz.getDeclaredConstructor().newInstance();
+
+		 File dataFolder = new File(extensionsDir, info.getName());
+
+		 instance.init(info, dataFolder, plugin);
+		 instance.onLoad();
+		 instance.onEnable();
+
+		 // TODO: add to a active extensions list for track
+
+		 try {
+			 loader.close();
+		 } catch (IOException ignored) {}
+
+		 plugin.getLogger().info("Enabled extension: " + info.getName() + " v" + info.getVersion());
+
+
+	 }
 
 	public void reloadAllExtensions() {
 		// TODO
